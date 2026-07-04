@@ -3,13 +3,13 @@ from __future__ import annotations
 import json
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy import select
 
 from app.api.v1.deps import get_current_user, get_db
 from app.db.models.jobs import JobDefinition, JobRun
-from app.workers.tasks import run_job
+from app.workers.inline import run_job_inline
 
 router = APIRouter()
 
@@ -52,7 +52,13 @@ async def create_job(payload: JobCreate, db=Depends(get_db), _=Depends(get_curre
 
 
 @router.post("/jobs/{job_id}/runs", response_model=RunOut)
-async def create_run(job_id: str, payload: RunCreate, db=Depends(get_db), _=Depends(get_current_user)):
+async def create_run(
+    job_id: str,
+    payload: RunCreate,
+    background_tasks: BackgroundTasks,
+    db=Depends(get_db),
+    _=Depends(get_current_user),
+):
     try:
         job_uuid = uuid.UUID(job_id)
     except ValueError:
@@ -68,7 +74,9 @@ async def create_run(job_id: str, payload: RunCreate, db=Depends(get_db), _=Depe
     await db.commit()
     await db.refresh(run)
 
-    run_job.delay(str(run.id))  # background task (demo)
+    # Free-tier deploys may not support external workers.
+    # We run jobs inline via FastAPI background tasks in production; you can switch to Celery later.
+    background_tasks.add_task(run_job_inline, str(run.id))
     return RunOut(id=str(run.id), job_id=str(run.job_id), status=run.status)
 
 
