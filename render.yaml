@@ -1,108 +1,26 @@
 services:
   - type: web
-    name: job-orchestrator-fastapi-api
+    name: backend-portfolio-template-api
     env: docker
     plan: free
     autoDeploy: true
     dockerfilePath: docker/api/Dockerfile
-    preDeployCommand: alembic upgrade head
     healthCheckPath: /api/v1/health
     envVars:
       - key: ENV
         value: production
       - key: JWT_SECRET
         generateValue: true
+      - key: RUN_MIGRATIONS_ON_STARTUP
+        value: "true"
       - key: DATABASE_URL
         fromDatabase:
-          name: job-orchestrator-fastapi-db
+          name: backend-portfolio-template-db
           property: connectionString
-      - key: REDIS_URL
-        fromService:
-          type: redis
-          name: job-orchestrator-fastapi-redis
-          property: connectionString
-      - key: CELERY_BROKER_URL
-        fromService:
-          type: redis
-          name: job-orchestrator-fastapi-redis
-          property: connectionString
-      - key: CELERY_RESULT_BACKEND
-        fromService:
-          type: redis
-          name: job-orchestrator-fastapi-redis
-          property: connectionString
-
-  - type: worker
-    name: job-orchestrator-fastapi-worker
-    env: docker
-    plan: free
-    dockerfilePath: docker/api/Dockerfile
-    startCommand: python -m app.workers.celery_app worker -l INFO
-    autoDeploy: true
-    envVars:
-      - key: ENV
-        value: production
-      - key: JWT_SECRET
-        sync: false
-      - key: DATABASE_URL
-        fromDatabase:
-          name: job-orchestrator-fastapi-db
-          property: connectionString
-      - key: REDIS_URL
-        fromService:
-          type: redis
-          name: job-orchestrator-fastapi-redis
-          property: connectionString
-      - key: CELERY_BROKER_URL
-        fromService:
-          type: redis
-          name: job-orchestrator-fastapi-redis
-          property: connectionString
-      - key: CELERY_RESULT_BACKEND
-        fromService:
-          type: redis
-          name: job-orchestrator-fastapi-redis
-          property: connectionString
-
-  - type: worker
-    name: job-orchestrator-fastapi-beat
-    env: docker
-    plan: free
-    dockerfilePath: docker/api/Dockerfile
-    startCommand: python -m app.workers.celery_app beat -l INFO
-    autoDeploy: true
-    envVars:
-      - key: ENV
-        value: production
-      - key: JWT_SECRET
-        sync: false
-      - key: DATABASE_URL
-        fromDatabase:
-          name: job-orchestrator-fastapi-db
-          property: connectionString
-      - key: REDIS_URL
-        fromService:
-          type: redis
-          name: job-orchestrator-fastapi-redis
-          property: connectionString
-      - key: CELERY_BROKER_URL
-        fromService:
-          type: redis
-          name: job-orchestrator-fastapi-redis
-          property: connectionString
-      - key: CELERY_RESULT_BACKEND
-        fromService:
-          type: redis
-          name: job-orchestrator-fastapi-redis
-          property: connectionString
-
-  - type: redis
-    name: job-orchestrator-fastapi-redis
-    plan: free
+      - key: LLM_ENABLED
+        value: "false"
 
 databases:
-  - name: job-orchestrator-fastapi-db
+  - name: backend-portfolio-template-db
     plan: free
     databaseName: app
-    user: postgres
-
